@@ -1,24 +1,30 @@
 pipeline {
     agent any
-       triggers {
-        pollSCM "* * * * *"
-       }
+    tools {
+        go 'go-1.11'
+    }
+    environment {
+        GO111MODULE = 'on'
+    }
     stages {
-        stage('Build Application') { 
+        stage('Compile') {
             steps {
-                echo '=== Building Application ==='
-                sh 'mvn -B -DskipTests clean package' 
+                sh 'go build'
             }
         }
-        stage('Test Application') {
-            steps {
-                echo '=== Testing Application ==='
-                sh 'mvn test'
+        stage('Test') {
+            environment {
+                CODECOV_TOKEN = credentials('codecov_token')
             }
-            post {
-                always {
-                    junit 'target/surefire-reports/*.xml'
-                }
+            steps {
+                sh 'go test ./... -coverprofile=coverage.txt'
+                sh "curl -s https://codecov.io/bash | bash -s -"
+            }
+        }
+        stage('Code Analysis') {
+            steps {
+                sh 'curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $GOPATH/bin v1.12.5'
+                sh 'golangci-lint run'
             }
         }
         stage('Build Docker Image') {
@@ -32,7 +38,7 @@ pipeline {
                 }
             }
         }
-        stage('Push Docker Image') {
+                stage('Push Docker Image') {
             when {
                 branch 'master'
             }

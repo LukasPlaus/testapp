@@ -44,6 +44,7 @@ pipeline {
                     docker.withRegistry('https://registry.hub.docker.com', 'dockerHubCredentials') {
                         app.push("$SHORT_COMMIT")
                         app.push("latest")
+                        
                     }
                 }
             }
